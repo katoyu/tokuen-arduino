@@ -15,12 +15,15 @@
 #define SCL_PIN 25
 #endif
 
-#define D 10
+#define D 5
 
 //初期値セット
-double Ymemo = 0.00;
-double Yheni;
-double Ymove = 0.00;
+double Yamemo = 0.00;
+double Yaheni = 0.00;
+double Yamove = 0.00;
+double Ygmemo = 0.00;
+double Ygheni = 0.00;
+double Ygmove = 0.00;
 double Yset,Ynow,Ypast;
 int count=0;
 int swi=0; //0,1で変化　0の時正常動作　1の時異符号をシャットアウトしgyが0付近になったら解除
@@ -50,8 +53,7 @@ L6470_setup(); //L6470を設定
 MsTimer2::set(50, fulash);//シリアルモニター用のタイマー割り込み
 MsTimer2::start();
 
-delay(500);
-L6470_goto(0x2789);
+//L6470_goto(0x2789);
 delay(1000);
 
 /*
@@ -99,9 +101,20 @@ L6470_hardhiz();//回転急停止、保持トルクなし
   aY = mySensor.accelY();
   aZ = mySensor.accelZ();
 
-  aY*360;
-}
+  Yamove = aY*180;
+    Serial.println(" accelY: " + String(aY) );
 
+      if(Yamove >= 0){
+        L6470_move(1,int(Yamove));
+      }else if(Yamove < 0){
+        L6470_move(0,int(-Yamove));
+      }
+  Yamemo = aY;
+  L6470_goto(0x6000);//指定座標に最短でいける回転方向で移動
+  L6470_busydelay(1000);
+  L6470_gohome();//指定座標に最短でいける回転方向で移動
+  L6470_busydelay(1000);
+}
 void loop(){
 
   //Serial.println("sensorId: " + String(sensorId));
@@ -137,54 +150,36 @@ void loop(){
   Serial.print(" at " + String(millis()) + "ms" );
   //Serial.print(" "); // Add an empty line
 
-  Serial.print(" Ynow: " + String(Ynow));
-  Serial.print(" Yheni: " + String(Yheni));
-  Serial.print(" Ymove: " + String(Ymove));
+  Serial.print(" Yheni: " + String(Yaheni));
+  Serial.print(" Ymove: " + String(Yamove));
+  Serial.print(" Yheni: " + String(Ygheni));
+  Serial.print(" Ymove: " + String(Ygmove));
   
  // L6470_move(1,25600);//指定方向に指定数ステップする 
   //L6470_(0x6789);
   //L6470_move(0,);//指定方向に指定数ステップする 
   //delay(1000);
-
- Ynow += Ymove;
-
-
-if((Ypast>=0&&Ynow<0)||(Ypast<0&&Ynow>=0)){
-    swi = 1;
-    count=0;
-}else{
-    swi = 0;
-}
-if(swi==1){
-  if(count % 200 == 0){
-    swi = 0;
+   double Yaval,sum = 0;
+  for(int i=0;i<100;i++){
+      aY = mySensor.accelY();
+    sum += aY;
   }
-}
-  Ymove = - (Yheni * 25600/360) ;
-/*
-  if((gY<=-10 && gY>=10 && Ymemo>-10 && Ymemo<10)||(gY>-10 && gY<10 && Ymemo<=-10 && Ymemo>=10)){
-    swi = 1;
-  }else{
-    swi = 0;
+  Yaval = sum/100;
+  Yaheni = Yaval-Yamemo;
+  Yamove = Yaheni*180*25600/360;
+
+  if(Yaheni >= 0.03){
+    L6470_move(1,int(Yamove));
+  }else if(Yaheni < -0.03){
+    L6470_move(0,int(-Yamove));
   }
-  */
-  
-  switch(swi){
-    case 0:
-      if(Ymove >= 100){
-        L6470_move(1,int(Ymove));
-      }else if(Ymove < -100){
-        L6470_move(0,int(-Ymove));
-      }
-      break;
-    case 1:
-      break;
-  }
-  Serial.print(" swi: " + String(swi));
+
   Serial.println("");
-  Yheni = (gY - Ymemo); 
-  Ymemo = gY;
-  Ypast = Ynow;
+  Yamemo = aY;
+
+//  Yheni = (gY - Ymemo); 
+//  Ymemo = gY;
+//  Ypast = Ynow;
   delay(D);
 }
 
