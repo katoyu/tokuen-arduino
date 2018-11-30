@@ -110,10 +110,12 @@ L6470_hardhiz();//回転急停止、保持トルクなし
         L6470_move(0,int(-Yamove));
       }
   Yamemo = aY;
+  /*
   L6470_goto(0x6000);//指定座標に最短でいける回転方向で移動
   L6470_busydelay(1000);
   L6470_gohome();//指定座標に最短でいける回転方向で移動
   L6470_busydelay(1000);
+  */
 }
 void loop(){
 
